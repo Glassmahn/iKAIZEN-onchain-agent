@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Agent NFT
 ## Introduction
 With the increasing intelligence of AI models, agents have become increasingly powerful in helping people process meaningful daily tasks automatically. In the blockchain industry, many projects have provided functionality for users to create agents. This trend will continue, and "agent x crypto" has been recognized as one of the biggest narratives in the coming years. Currently, a key missing element is the decentralized management of agent ownership. Specifically, when you create an agent on platforms like Virtuals or EternalAI, there is no on-chain information to verify that the agent you created belongs to you. We believe NFTs could provide a key solution to this problem.
@@ -33,3 +34,6 @@ In summary, the full flow is shown in Fig.4. Before the sender initiates the tra
 ![Full flow](doc/img/full_flow.jpeg)
 
 The clone() process is similar to transfer(), but instead of changing the ownership of the original token, it creates a new token with the same metadata. We also support an authorizeUsage() function that adds authority for using the token's private metadata but not accessing it, requiring a sealed executor that processes the metadata securely. The sealed executor can be implemented using either TEE or FHE.
+=======
+# iKAIZEN-onchain-agent
+>>>>>>> 8214e9a86f3ef86dd50b17adbc30985dc7bb73a2
