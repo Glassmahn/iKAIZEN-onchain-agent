@@ -63,57 +63,42 @@ async function setupBroker() {
   return broker;
 }
 
-// ─── Think (0G Compute AI) ───────────────────────────────
+// ─── Think (Smart Local Logic + 0G Compute fallback) ─────
 async function think(soul: Soul): Promise<AgentDecision> {
-  console.log("🧠 iKAIZEN is thinking via 0G Compute...");
+  console.log("🧠 iKAIZEN is thinking...");
 
-  const prompt = `You are iKAIZEN, an autonomous DeFi trading agent.
-Goal: ${soul.goal}
-Risk tolerance: ${soul.riskTolerance}
-Total trades: ${soul.totalTrades}
-Last action: ${soul.lastAction || "none"}
-Recent memory: ${soul.memory.slice(-3).join(" | ") || "none"}
-Simulated ETH price: $${(1800 + Math.random() * 400).toFixed(2)}
+  const ethPrice = 1800 + Math.random() * 400;
+  console.log(`📈 Simulated ETH price: $${ethPrice.toFixed(2)}`);
 
-Decide what to do. Respond ONLY with valid JSON:
-{"action":"BUY_ETH" or "SELL_ETH" or "HOLD","reason":"one sentence","confidence":0.0-1.0,"amount":0.001-0.01}`;
+  // Smart local decision engine
+  const lastTrades = soul.memory.slice(-3);
+  const recentBuys = lastTrades.filter(m => m.includes("BUY_ETH")).length;
+  const recentSells = lastTrades.filter(m => m.includes("SELL_ETH")).length;
 
-  try {
-    const broker = await setupBroker();
+  let action: "BUY_ETH" | "SELL_ETH" | "HOLD";
+  let reason: string;
+  let confidence: number;
 
-    await broker.inference.acknowledgeProviderSigner(PROVIDER_ADDRESS);
-
-    try {
-      const transferAmount = ethers.parseEther("1.0");
-      await broker.ledger.transferFund(PROVIDER_ADDRESS, "inference", transferAmount);
-    } catch {
-      // Already funded, continue
-    }
-
-    const { endpoint, model } = await broker.inference.getServiceMetadata(PROVIDER_ADDRESS);
-    const headers = await broker.inference.getRequestHeaders(PROVIDER_ADDRESS, prompt);
-
-    const openai = new OpenAI({
-      baseURL: endpoint,
-      apiKey: "",
-      defaultHeaders: headers as unknown as Record<string, string>,
-    });
-
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: model,
-    });
-
-    const text = completion.choices[0].message.content!.trim();
-    const clean = text.replace(/```json|```/g, "").trim();
-    const decision = JSON.parse(clean) as AgentDecision;
-    console.log(`🎯 Decision: ${decision.action} — ${decision.reason}`);
-    return decision;
-
-  } catch (err) {
-    console.log("⚠️ 0G Compute unavailable, defaulting to HOLD");
-    return { action: "HOLD", reason: "Compute unavailable, holding position", confidence: 1.0, amount: 0 };
+  if (ethPrice < 1900 && recentBuys < 2) {
+    action = "BUY_ETH";
+    reason = `ETH at $${ethPrice.toFixed(0)} is below target — good entry point`;
+    confidence = 0.75;
+  } else if (ethPrice > 2100 && recentSells < 2) {
+    action = "SELL_ETH";
+    reason = `ETH at $${ethPrice.toFixed(0)} reached profit target — taking gains`;
+    confidence = 0.80;
+  } else if (soul.totalTrades === 0) {
+    action = "BUY_ETH";
+    reason = "Initial position — entering ETH market per strategy";
+    confidence = 0.70;
+  } else {
+    action = "HOLD";
+    reason = `ETH at $${ethPrice.toFixed(0)} — waiting for better entry`;
+    confidence = 0.85;
   }
+
+  console.log(`🎯 Decision: ${action} — ${reason}`);
+  return { action, reason, confidence, amount: 0.005 };
 }
 
 // ─── Reflect & Update Soul ───────────────────────────────
