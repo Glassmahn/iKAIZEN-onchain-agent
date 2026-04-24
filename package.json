@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
+    "agent": "ts-node src/agent/index.ts",
     "deploy": "hardhat deploy --network",
     "verify": "ts-node scripts/verify_contract.ts",
     "verify:zgTestnet": "ts-node scripts/verify_contract.ts zgTestnet",
@@ -48,6 +49,7 @@
   "dependencies": {
     "@0glabs/0g-serving-broker": "^0.7.5",
     "@0glabs/0g-ts-sdk": "^0.3.3",
+    "openai": "^6.34.0",
     "prettier": "2.8.4",
     "prettier-plugin-organize-imports": "3.2.4",
     "prettier-plugin-solidity": "1.1.2"

@@ -1,0 +1,12 @@
+{
+  "goal": "Maximize ETH-USDC yield safely with low risk",
+  "memory": [
+    "[2026-04-24T23:10:31.268Z] HOLD: Compute unavailable, holding position"
+  ],
+  "strategyVersion": "1.0",
+  "riskTolerance": 0.15,
+  "totalTrades": 0,
+  "totalPnL": 0,
+  "lastAction": "HOLD",
+  "createdAt": "2026-04-24T23:10:26.027Z"
+}
