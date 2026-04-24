@@ -7,12 +7,13 @@
     "[2026-04-24T23:23:29.846Z] SELL_ETH: ETH at $2177 reached profit target — taking gains",
     "[2026-04-24T23:23:52.867Z] HOLD: ETH at $1979 — waiting for better entry",
     "[2026-04-24T23:24:27.153Z] HOLD: ETH at $1966 — waiting for better entry",
-    "[2026-04-24T23:25:20.462Z] BUY_ETH: ETH at $1868 is below target — good entry point"
+    "[2026-04-24T23:25:20.462Z] BUY_ETH: ETH at $1868 is below target — good entry point",
+    "[2026-04-24T23:36:59.345Z] HOLD: ETH at $2064 — waiting for better entry"
   ],
   "strategyVersion": "1.0",
   "riskTolerance": 0.15,
   "totalTrades": 3,
   "totalPnL": 0.004,
-  "lastAction": "BUY_ETH",
+  "lastAction": "HOLD",
   "createdAt": "2026-04-24T23:10:26.027Z"
 }

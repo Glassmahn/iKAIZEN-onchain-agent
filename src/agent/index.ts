@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
 import OpenAI from "openai";
+import { executeTrade } from "./trader";
 
 dotenv.config();
 
@@ -115,20 +116,44 @@ function reflect(soul: Soul, decision: AgentDecision): Soul {
   return soul;
 }
 
-// ─── Main Agent Loop ─────────────────────────────────────
+
+
 async function runAgentCycle(): Promise<void> {
   console.log("\n🚀 ====== iKAIZEN Agent Cycle Started ======");
   console.log(`⏰ Time: ${new Date().toISOString()}`);
+
+  // 1. Load soul
   const soul = loadSoul();
   console.log(`📖 Soul loaded — version ${soul.strategyVersion}, ${soul.totalTrades} trades`);
+
+  // 2. Think
   const decision = await think(soul);
+
+  // 3. Get wallet address
+  const provider = new ethers.JsonRpcProvider("https://evmrpc-testnet.0g.ai");
+  const wallet = new ethers.Wallet(process.env.ZG_TESTNET_PRIVATE_KEY!, provider);
+
+  // 4. Execute trade
+  const tradeResult = await executeTrade(decision.action, decision.amount, wallet.address);
+
+  // 5. Reflect
   const updatedSoul = reflect(soul, decision);
+
+  // 6. Add trade result to memory
+  if (tradeResult.txHash) {
+    updatedSoul.memory.push(`[TRADE] ${tradeResult.action} — tx: ${tradeResult.txHash} simulated: ${tradeResult.simulated}`);
+  }
+
+  // 7. Save soul
   saveSoul(updatedSoul);
+
   console.log("\n📊 ====== Cycle Complete ======");
-  console.log(`Action: ${decision.action}`);
-  console.log(`Reason: ${decision.reason}`);
+  console.log(`Action:       ${decision.action}`);
+  console.log(`Reason:       ${decision.reason}`);
+  console.log(`Trade:        ${tradeResult.success ? "✅" : "❌"} ${tradeResult.simulated ? "(simulated)" : "(live)"}`);
+  console.log(`Tx Hash:      ${tradeResult.txHash || "none"}`);
   console.log(`Total trades: ${updatedSoul.totalTrades}`);
-  console.log(`Total PnL: ${updatedSoul.totalPnL} ETH`);
+  console.log(`Total PnL:    ${updatedSoul.totalPnL} ETH`);
   console.log("================================\n");
 }
 
