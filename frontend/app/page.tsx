@@ -4,15 +4,22 @@ import { useEffect, useRef, useState } from 'react';
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const tiltRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     setMounted(true);
+
+    const onMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
+    };
+    window.addEventListener('mousemove', onMove);
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    let t = 0;
-    let raf: number;
+    let t = 0, raf: number;
 
     function resize() {
       if (!canvas) return;
@@ -22,311 +29,299 @@ export default function Home() {
     resize();
     window.addEventListener('resize', resize);
 
-    const stars: {x:number;y:number;r:number;a:number;p:number}[] = [];
-    for (let i = 0; i < 120; i++) stars.push({ x:Math.random(), y:Math.random()*0.55, r:0.3+Math.random()*1.1, a:0.15+Math.random()*0.55, p:Math.random()*Math.PI*2 });
+    const stars = Array.from({ length: 140 }, () => ({
+      x: Math.random(), y: Math.random() * 0.58,
+      r: 0.2 + Math.random() * 1.2,
+      a: 0.12 + Math.random() * 0.6,
+      p: Math.random() * Math.PI * 2,
+    }));
 
     function draw() {
       if (!canvas || !ctx) return;
       const W = canvas.width, H = canvas.height;
-      t += 0.004;
-      ctx.clearRect(0,0,W,H);
+      t += 0.003;
 
-      // Sky gradient
-      const sky = ctx.createLinearGradient(0,0,0,H*0.72);
-      sky.addColorStop(0,'#07090f');
-      sky.addColorStop(0.3,'#0b0e18');
-      sky.addColorStop(0.7,'#0f1220');
-      sky.addColorStop(1,'#141828');
+      // Smooth tilt toward mouse
+      tiltRef.current.x += (mouseRef.current.x - 0.5 - tiltRef.current.x) * 0.04;
+      tiltRef.current.y += (mouseRef.current.y - 0.5 - tiltRef.current.y) * 0.04;
+      const tx = tiltRef.current.x * 18;
+      const ty = tiltRef.current.y * 10;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Sky
+      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.75);
+      sky.addColorStop(0, '#050810');
+      sky.addColorStop(0.35, '#080c1a');
+      sky.addColorStop(0.7, '#0c1022');
+      sky.addColorStop(1, '#111528');
       ctx.fillStyle = sky;
-      ctx.fillRect(0,0,W,H);
+      ctx.fillRect(0, 0, W, H);
 
-      // Stars
+      // Stars with parallax
       stars.forEach(s => {
-        const a = s.a * (0.5 + Math.sin(t*1.4+s.p)*0.35);
+        const a = s.a * (0.45 + Math.sin(t * 1.6 + s.p) * 0.32);
+        const px = s.x * W + tx * 0.4;
+        const py = s.y * H + ty * 0.4;
         ctx.beginPath();
-        ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+        ctx.arc(px, py, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       });
 
-      // Moon glow
-      const mx = W*0.5, my = H*0.26;
-      const mg = ctx.createRadialGradient(mx,my,0,mx,my,H*0.28);
-      mg.addColorStop(0,'rgba(220,225,240,0.10)');
-      mg.addColorStop(0.5,'rgba(180,190,220,0.04)');
-      mg.addColorStop(1,'rgba(100,110,160,0)');
-      ctx.fillStyle = mg;
-      ctx.fillRect(0,0,W,H);
+      // Moon with parallax
+      const mx = W * 0.5 + tx * 0.6, my = H * 0.24 + ty * 0.5;
+      const mr = Math.min(W, H) * 0.115;
+      const atmG = ctx.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 2.8);
+      atmG.addColorStop(0, 'rgba(210,218,248,0.11)');
+      atmG.addColorStop(0.5, 'rgba(180,190,228,0.045)');
+      atmG.addColorStop(1, 'rgba(120,130,180,0)');
+      ctx.fillStyle = atmG;
+      ctx.fillRect(0, 0, W, H);
 
-      // Moon
-      const mr = H*0.13;
-      const moonFill = ctx.createRadialGradient(mx-mr*0.2,my-mr*0.2,0,mx,my,mr);
-      moonFill.addColorStop(0,'rgba(245,246,255,1)');
-      moonFill.addColorStop(0.5,'rgba(228,232,248,0.98)');
-      moonFill.addColorStop(0.88,'rgba(200,206,230,0.96)');
-      moonFill.addColorStop(1,'rgba(170,176,208,0.88)');
+      const moonF = ctx.createRadialGradient(mx - mr * 0.22, my - mr * 0.22, 0, mx, my, mr);
+      moonF.addColorStop(0, 'rgba(248,250,255,1)');
+      moonF.addColorStop(0.45, 'rgba(232,236,252,0.99)');
+      moonF.addColorStop(0.82, 'rgba(205,212,238,0.97)');
+      moonF.addColorStop(1, 'rgba(172,180,215,0.88)');
       ctx.beginPath();
-      ctx.arc(mx,my,mr,0,Math.PI*2);
-      ctx.fillStyle = moonFill;
+      ctx.arc(mx, my, mr, 0, Math.PI * 2);
+      ctx.fillStyle = moonF;
       ctx.fill();
 
-      // Moon reflection on water
-      const reflGrad = ctx.createLinearGradient(0,H*0.62,0,H*0.82);
-      reflGrad.addColorStop(0,'rgba(200,210,240,0.0)');
-      reflGrad.addColorStop(0.3,'rgba(200,210,240,0.06)');
-      reflGrad.addColorStop(0.6,'rgba(180,190,220,0.04)');
-      reflGrad.addColorStop(1,'rgba(150,160,200,0)');
-      ctx.fillStyle = reflGrad;
-      const reflW = mr*0.7;
+      // Moon edge shadow
+      const moonEdge = ctx.createRadialGradient(mx, my, mr * 0.55, mx, my, mr);
+      moonEdge.addColorStop(0, 'rgba(0,0,0,0)');
+      moonEdge.addColorStop(0.72, 'rgba(0,0,0,0.02)');
+      moonEdge.addColorStop(1, 'rgba(0,0,0,0.22)');
       ctx.beginPath();
-      ctx.ellipse(mx, H*0.75, reflW, H*0.1, 0, 0, Math.PI*2);
+      ctx.arc(mx, my, mr, 0, Math.PI * 2);
+      ctx.fillStyle = moonEdge;
       ctx.fill();
 
-      // LEFT mountain
-      ctx.beginPath();
-      ctx.moveTo(-W*0.05, H*0.85);
-      ctx.bezierCurveTo(W*0.05,H*0.65, W*0.12,H*0.42, W*0.22,H*0.30);
-      ctx.bezierCurveTo(W*0.28,H*0.22, W*0.30,H*0.38, W*0.35,H*0.55);
-      ctx.bezierCurveTo(W*0.38,H*0.65, W*0.40,H*0.72, W*0.42,H*0.85);
-      ctx.lineTo(-W*0.05,H*0.85);
-      ctx.closePath();
-      const lm = ctx.createLinearGradient(0,H*0.25,0,H*0.85);
-      lm.addColorStop(0,'rgba(38,44,65,0.95)');
-      lm.addColorStop(0.4,'rgba(30,36,55,0.97)');
-      lm.addColorStop(1,'rgba(18,22,38,1)');
-      ctx.fillStyle = lm;
-      ctx.fill();
+      // Mountain helper
+      function mountain(pts: number[][], grad: CanvasGradient) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length - 2; i++) {
+          const cpx = (pts[i][0] + pts[i + 1][0]) / 2;
+          const cpy = (pts[i][1] + pts[i + 1][1]) / 2;
+          ctx.quadraticCurveTo(pts[i][0], pts[i][1], cpx, cpy);
+        }
+        ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
 
-      // LEFT mountain snow
-      ctx.beginPath();
-      ctx.moveTo(W*0.22,H*0.30);
-      ctx.bezierCurveTo(W*0.20,H*0.34, W*0.18,H*0.36, W*0.16,H*0.38);
-      ctx.bezierCurveTo(W*0.19,H*0.37, W*0.23,H*0.35, W*0.26,H*0.38);
-      ctx.bezierCurveTo(W*0.28,H*0.35, W*0.25,H*0.32, W*0.22,H*0.30);
-      ctx.fillStyle = 'rgba(200,208,230,0.55)';
-      ctx.fill();
+      // Far mountains — parallax layer 1
+      const p1 = tx * 1.2, q1 = ty * 0.7;
+      const farG = ctx.createLinearGradient(0, H * 0.18, 0, H * 0.82);
+      farG.addColorStop(0, 'rgba(32,38,62,0.92)');
+      farG.addColorStop(1, 'rgba(14,18,34,0.98)');
+      mountain([
+        [-W * 0.05 + p1, H],
+        [-W * 0.02 + p1, H * 0.72 + q1],
+        [W * 0.10 + p1, H * 0.48 + q1],
+        [W * 0.20 + p1, H * 0.28 + q1],
+        [W * 0.30 + p1, H * 0.45 + q1],
+        [W * 0.42 + p1, H * 0.60 + q1],
+        [W * 0.50 + p1, H * 0.52 + q1],
+        [W * 0.58 + p1, H * 0.60 + q1],
+        [W * 0.70 + p1, H * 0.45 + q1],
+        [W * 0.80 + p1, H * 0.28 + q1],
+        [W * 0.90 + p1, H * 0.48 + q1],
+        [W * 1.02 + p1, H * 0.72 + q1],
+        [W * 1.05 + p1, H],
+      ], farG);
 
-      // LEFT foreground mountain
-      ctx.beginPath();
-      ctx.moveTo(-W*0.05,H);
-      ctx.bezierCurveTo(W*0.02,H*0.82, W*0.08,H*0.68, W*0.18,H*0.55);
-      ctx.bezierCurveTo(W*0.24,H*0.48, W*0.28,H*0.58, W*0.32,H*0.72);
-      ctx.bezierCurveTo(W*0.35,H*0.80, W*0.37,H*0.88, W*0.40,H);
-      ctx.lineTo(-W*0.05,H);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(10,12,22,1)';
-      ctx.fill();
+      // Snow caps
+      ctx.fillStyle = 'rgba(210,218,240,0.42)';
+      [[W * 0.20 + p1, H * 0.28 + q1, 0.032], [W * 0.80 + p1, H * 0.28 + q1, 0.032]].forEach(([sx, sy, sr]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx as number, sy as number, W * (sr as number), H * 0.025, 0, Math.PI, 0);
+        ctx.fill();
+      });
 
-      // RIGHT mountain
-      ctx.beginPath();
-      ctx.moveTo(W*1.05,H*0.85);
-      ctx.bezierCurveTo(W*0.95,H*0.65, W*0.88,H*0.42, W*0.78,H*0.30);
-      ctx.bezierCurveTo(W*0.72,H*0.22, W*0.70,H*0.38, W*0.65,H*0.55);
-      ctx.bezierCurveTo(W*0.62,H*0.65, W*0.60,H*0.72, W*0.58,H*0.85);
-      ctx.lineTo(W*1.05,H*0.85);
-      ctx.closePath();
-      const rm = ctx.createLinearGradient(0,H*0.25,0,H*0.85);
-      rm.addColorStop(0,'rgba(38,44,65,0.95)');
-      rm.addColorStop(0.4,'rgba(30,36,55,0.97)');
-      rm.addColorStop(1,'rgba(18,22,38,1)');
-      ctx.fillStyle = rm;
-      ctx.fill();
+      // Mid mountains — parallax layer 2
+      const p2 = tx * 2.2, q2 = ty * 1.2;
+      const midG = ctx.createLinearGradient(0, H * 0.35, 0, H);
+      midG.addColorStop(0, 'rgba(18,22,40,0.96)');
+      midG.addColorStop(1, 'rgba(8,10,20,1)');
+      mountain([
+        [-W * 0.05 + p2, H],
+        [W * 0.05 + p2, H * 0.75 + q2],
+        [W * 0.14 + p2, H * 0.55 + q2],
+        [W * 0.22 + p2, H * 0.40 + q2],
+        [W * 0.32 + p2, H * 0.58 + q2],
+        [W * 0.44 + p2, H * 0.68 + q2],
+        [W * 0.50 + p2, H * 0.62 + q2],
+        [W * 0.56 + p2, H * 0.68 + q2],
+        [W * 0.68 + p2, H * 0.58 + q2],
+        [W * 0.78 + p2, H * 0.40 + q2],
+        [W * 0.86 + p2, H * 0.55 + q2],
+        [W * 0.95 + p2, H * 0.75 + q2],
+        [W * 1.05 + p2, H],
+      ], midG);
 
-      // RIGHT mountain snow
-      ctx.beginPath();
-      ctx.moveTo(W*0.78,H*0.30);
-      ctx.bezierCurveTo(W*0.80,H*0.34, W*0.82,H*0.36, W*0.84,H*0.38);
-      ctx.bezierCurveTo(W*0.81,H*0.37, W*0.77,H*0.35, W*0.74,H*0.38);
-      ctx.bezierCurveTo(W*0.72,H*0.35, W*0.75,H*0.32, W*0.78,H*0.30);
-      ctx.fillStyle = 'rgba(200,208,230,0.55)';
-      ctx.fill();
+      // Snow caps mid
+      ctx.fillStyle = 'rgba(198,208,235,0.38)';
+      [[W * 0.22 + p2, H * 0.40 + q2, 0.025], [W * 0.78 + p2, H * 0.40 + q2, 0.025]].forEach(([sx, sy, sr]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx as number, sy as number, W * (sr as number), H * 0.018, 0, Math.PI, 0);
+        ctx.fill();
+      });
 
-      // RIGHT foreground mountain
-      ctx.beginPath();
-      ctx.moveTo(W*1.05,H);
-      ctx.bezierCurveTo(W*0.98,H*0.82, W*0.92,H*0.68, W*0.82,H*0.55);
-      ctx.bezierCurveTo(W*0.76,H*0.48, W*0.72,H*0.58, W*0.68,H*0.72);
-      ctx.bezierCurveTo(W*0.65,H*0.80, W*0.63,H*0.88, W*0.60,H);
-      ctx.lineTo(W*1.05,H);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(10,12,22,1)';
-      ctx.fill();
+      // Front mountains — parallax layer 3 (closest)
+      const p3 = tx * 3.8, q3 = ty * 2.0;
+      const fgG = ctx.createLinearGradient(0, H * 0.5, 0, H);
+      fgG.addColorStop(0, 'rgba(8,10,20,0.99)');
+      fgG.addColorStop(1, 'rgba(4,5,12,1)');
+      mountain([
+        [-W * 0.05 + p3, H],
+        [W * 0.0 + p3, H * 0.88 + q3],
+        [W * 0.10 + p3, H * 0.72 + q3],
+        [W * 0.18 + p3, H * 0.60 + q3],
+        [W * 0.25 + p3, H * 0.72 + q3],
+        [W * 0.38 + p3, H * 0.82 + q3],
+        [W * 0.50 + p3, H * 0.76 + q3],
+        [W * 0.62 + p3, H * 0.82 + q3],
+        [W * 0.75 + p3, H * 0.72 + q3],
+        [W * 0.82 + p3, H * 0.60 + q3],
+        [W * 0.90 + p3, H * 0.72 + q3],
+        [W * 1.0 + p3, H * 0.88 + q3],
+        [W * 1.05 + p3, H],
+      ], fgG);
 
-      // Water / valley floor
-      const water = ctx.createLinearGradient(0,H*0.62,0,H);
-      water.addColorStop(0,'rgba(14,18,32,0.92)');
-      water.addColorStop(0.3,'rgba(10,13,25,0.97)');
-      water.addColorStop(1,'rgba(6,8,16,1)');
-      ctx.fillStyle = water;
-      ctx.beginPath();
-      ctx.moveTo(W*0.38,H*0.64);
-      ctx.bezierCurveTo(W*0.42,H*0.60, W*0.48,H*0.58, W*0.5,H*0.58);
-      ctx.bezierCurveTo(W*0.52,H*0.58, W*0.58,H*0.60, W*0.62,H*0.64);
-      ctx.lineTo(W,H);
-      ctx.lineTo(0,H);
-      ctx.closePath();
-      ctx.fill();
+      // Water / valley glow
+      const waterG = ctx.createLinearGradient(0, H * 0.65, 0, H);
+      waterG.addColorStop(0, 'rgba(10,14,26,0)');
+      waterG.addColorStop(0.25, 'rgba(8,11,22,0.88)');
+      waterG.addColorStop(1, 'rgba(4,6,14,1)');
+      ctx.fillStyle = waterG;
+      ctx.fillRect(0, H * 0.65, W, H * 0.35);
+
+      // Moon reflection
+      const reflG = ctx.createRadialGradient(mx, H * 0.82, 0, mx, H * 0.82, mr * 1.4);
+      reflG.addColorStop(0, 'rgba(190,200,235,0.07)');
+      reflG.addColorStop(0.6, 'rgba(160,172,215,0.03)');
+      reflG.addColorStop(1, 'rgba(130,142,195,0)');
+      ctx.fillStyle = reflG;
+      ctx.fillRect(0, H * 0.68, W, H * 0.32);
 
       // Horizon mist
-      const mist = ctx.createLinearGradient(0,H*0.55,0,H*0.68);
-      mist.addColorStop(0,'rgba(20,25,45,0)');
-      mist.addColorStop(1,'rgba(14,18,34,0.65)');
-      ctx.fillStyle = mist;
-      ctx.fillRect(0,H*0.55,W,H*0.13);
+      const mistG = ctx.createLinearGradient(0, H * 0.58, 0, H * 0.70);
+      mistG.addColorStop(0, 'rgba(12,16,30,0)');
+      mistG.addColorStop(1, 'rgba(8,11,22,0.55)');
+      ctx.fillStyle = mistG;
+      ctx.fillRect(0, H * 0.58, W, H * 0.12);
 
-      // Bottom glassmorphism cards hint
-      const cardGrad = ctx.createLinearGradient(0,H*0.78,0,H);
-      cardGrad.addColorStop(0,'rgba(20,24,40,0)');
-      cardGrad.addColorStop(1,'rgba(12,15,28,0.95)');
-      ctx.fillStyle = cardGrad;
-      ctx.fillRect(0,H*0.78,W,H*0.22);
+      // Bottom content gradient
+      const bottomG = ctx.createLinearGradient(0, H * 0.72, 0, H);
+      bottomG.addColorStop(0, 'rgba(5,7,16,0)');
+      bottomG.addColorStop(1, 'rgba(4,5,12,0.96)');
+      ctx.fillStyle = bottomG;
+      ctx.fillRect(0, H * 0.72, W, H * 0.28);
 
       raf = requestAnimationFrame(draw);
     }
     draw();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize',resize); };
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mousemove', onMove); };
   }, []);
 
   return (
-    <div style={{ width:'100vw', height:'100vh', overflow:'hidden', position:'relative', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', fontFamily: 'Inter, system-ui, sans-serif', color: '#fff', background: '#050810' }}>
 
-      {/* Canvas background */}
-      <canvas ref={canvasRef} style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:0 }}/>
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }} />
 
-      {/* Noise texture */}
-      <div style={{ position:'absolute', inset:0, zIndex:1, pointerEvents:'none', opacity:0.028,
-        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
-      }}/>
+      {/* Noise */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', opacity: 0.025, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")` }} />
 
       {/* NAVBAR */}
-      <nav style={{ position:'absolute', top:0, left:0, right:0, zIndex:30, height:'60px', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 48px', backdropFilter:'blur(14px)', background:'rgba(7,9,15,0.55)', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
-        <span style={{ fontSize:'15px', fontWeight:600, color:'#fff', letterSpacing:'0.08em' }}>iKZ</span>
-        <div style={{ display:'flex', gap:'40px' }}>
-          {['about','docs','github'].map(item => (
+      <nav style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 clamp(20px,4vw,52px)', backdropFilter: 'blur(16px)', background: 'rgba(5,8,16,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '0.10em', color: '#fff' }}>iKZ</span>
+        <div style={{ display: 'flex', gap: 'clamp(20px,3vw,44px)', alignItems: 'center' }}>
+          {['about', 'docs', 'github'].map(item => (
             <a key={item}
-              href={item==='github'?'https://github.com/glassmahn/ikaizen-onchain-agent':'#'}
-              target={item==='github'?'_blank':undefined}
-              style={{ fontSize:'13px', fontWeight:300, color:'rgba(255,255,255,0.5)', textDecoration:'none', letterSpacing:'0.05em', transition:'color 0.22s', display:'inline-block', paddingBottom:'2px', borderBottom:'1px solid transparent' }}
-              onMouseEnter={e=>{ e.currentTarget.style.color='#fff'; e.currentTarget.style.borderBottomColor='rgba(255,255,255,0.3)'; }}
-              onMouseLeave={e=>{ e.currentTarget.style.color='rgba(255,255,255,0.5)'; e.currentTarget.style.borderBottomColor='transparent'; }}
+              href={item === 'github' ? 'https://github.com/glassmahn/ikaizen-onchain-agent' : '#'}
+              target={item === 'github' ? '_blank' : undefined}
+              style={{ fontSize: '13px', fontWeight: 300, color: 'rgba(255,255,255,0.48)', textDecoration: 'none', letterSpacing: '0.05em', transition: 'color 0.2s, border-color 0.2s', paddingBottom: '2px', borderBottom: '1px solid transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.35)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.48)'; e.currentTarget.style.borderBottomColor = 'transparent'; }}
             >{item}</a>
           ))}
         </div>
-        <button style={{ fontSize:'11px', fontWeight:500, color:'rgba(255,255,255,0.5)', background:'transparent', border:'none', cursor:'pointer', letterSpacing:'0.1em', textTransform:'uppercase', transition:'color 0.2s' }}
-          onMouseEnter={e=>{e.currentTarget.style.color='#fff'}}
-          onMouseLeave={e=>{e.currentTarget.style.color='rgba(255,255,255,0.5)'}}
-        >Login →</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button style={{ fontSize: '11.5px', fontWeight: 500, color: '#050810', background: 'rgba(240,244,255,0.92)', border: 'none', padding: '8px 20px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.05em', transition: 'all 0.22s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(240,244,255,0.92)'; }}
+          >Mint iNFT</button>
+        </div>
       </nav>
 
-      {/* HERO CONTENT */}
-      <div style={{ position:'absolute', top:'60px', left:0, right:0, bottom:0, zIndex:10, display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'0 0 0 0' }}>
+      {/* HERO */}
+      <div style={{ position: 'absolute', top: '62px', left: 0, right: 0, bottom: 0, zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 clamp(20px,5vw,80px)', textAlign: 'center' }}>
 
-        {/* Top hero area */}
-        <div style={{ flex:1, display:'flex', alignItems:'center', padding:'0 52px' }}>
-
-          {/* LEFT text */}
-          <div style={{ maxWidth:'520px', opacity:mounted?1:0, transform:mounted?'none':'translateY(22px)', transition:'opacity 0.9s ease 200ms, transform 0.9s ease 200ms' }}>
-
-            {/* Trading Program badge */}
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', marginBottom:'24px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', padding:'5px 14px 5px 10px' }}>
-              <svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.55)' strokeWidth='1.8'>
-                <circle cx='12' cy='12' r='3'/><path d='M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83'/>
-              </svg>
-              <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', letterSpacing:'0.08em' }}>Continuous Improvement Protocol</span>
-            </div>
-
-            {/* Main heading */}
-            <h1 style={{ margin:'0 0 20px 0', fontSize:'clamp(44px,5.8vw,80px)', fontWeight:700, lineHeight:1.08, letterSpacing:'-0.025em', color:'#fff' }}>
-              iKAIZEN
-            </h1>
-
-            {/* Description */}
-            <p style={{ margin:'0 0 8px 0', fontSize:'14px', fontWeight:300, color:'rgba(255,255,255,0.65)', lineHeight:1.75, maxWidth:'420px' }}>
-              iKAIZEN is built on one principle — progress compounds.
-            </p>
-            <p style={{ margin:'0 0 8px 0', fontSize:'14px', fontWeight:300, color:'rgba(255,255,255,0.52)', lineHeight:1.75, maxWidth:'420px' }}>
-              Every day is an opportunity to improve, even if only by 1%.
-            </p>
-            <p style={{ margin:'0 0 32px 0', fontSize:'14px', fontWeight:300, color:'rgba(255,255,255,0.52)', lineHeight:1.75, maxWidth:'420px' }}>
-              {"This isn't about perfection. It's about becoming unstoppable."}
-            </p>
-
-            {/* Buttons */}
-            <div style={{ display:'flex', gap:'12px', alignItems:'center' }}>
-              <button
-                style={{ fontSize:'12.5px', fontWeight:500, color:'#0a0c14', background:'#f0f2ff', border:'none', padding:'11px 26px', borderRadius:'24px', cursor:'pointer', letterSpacing:'0.04em', transition:'all 0.25s', boxShadow:'0 0 20px rgba(200,210,255,0.15)' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='#fff'; e.currentTarget.style.boxShadow='0 0 28px rgba(200,210,255,0.28)';}}
-                onMouseLeave={e=>{e.currentTarget.style.background='#f0f2ff'; e.currentTarget.style.boxShadow='0 0 20px rgba(200,210,255,0.15)';}}
-              >Mint iNFT</button>
-              <button
-                style={{ fontSize:'12.5px', fontWeight:400, color:'rgba(255,255,255,0.75)', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.15)', padding:'11px 26px', borderRadius:'24px', cursor:'pointer', letterSpacing:'0.04em', transition:'all 0.25s' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.10)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.28)'; e.currentTarget.style.color='#fff';}}
-                onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.15)'; e.currentTarget.style.color='rgba(255,255,255,0.75)';}}
-              >Enter the System</button>
-            </div>
-          </div>
-
-          {/* RIGHT stats — top right like inspo */}
-          <div style={{ marginLeft:'auto', textAlign:'right', opacity:mounted?1:0, transform:mounted?'none':'translateY(18px)', transition:'opacity 0.9s ease 400ms, transform 0.9s ease 400ms', paddingRight:'24px' }}>
-            <div style={{ display:'flex', gap:'40px', alignItems:'flex-start', marginBottom:'16px' }}>
-              {[['100%','profit split'],['1','minimum'],['24/7','live support']].map(([val,label]) => (
-                <div key={label} style={{ textAlign:'left' }}>
-                  <div style={{ fontSize:'clamp(22px,2.8vw,36px)', fontWeight:600, color:'#fff', lineHeight:1.1, letterSpacing:'-0.01em' }}>{val}</div>
-                  <div style={{ fontSize:'10.5px', color:'rgba(255,255,255,0.38)', marginTop:'4px', letterSpacing:'0.06em' }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize:'11.5px', color:'rgba(255,255,255,0.38)', lineHeight:1.7, maxWidth:'220px', marginLeft:'auto', textAlign:'left' }}>
-              refine expertise in managing on-chain agents through strategic insights and continuous improvement protocols.
-            </p>
-          </div>
+        {/* Badge */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: 'clamp(18px,2.5vh,28px)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '24px', padding: '5px 16px', opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(10px)', transition: 'opacity 0.7s ease 100ms, transform 0.7s ease 100ms' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 8px rgba(34,211,238,0.8)' }} />
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Continuous Improvement Protocol</span>
         </div>
 
-        {/* Bottom glass cards row */}
-        <div style={{ display:'flex', gap:'2px', padding:'0 0 0 0', height:'130px', opacity:mounted?1:0, transition:'opacity 1s ease 600ms' }}>
-          {[
-            { label:'Cycles Completed', value:'1,248', icon:'⟳' },
-            { label:'Agent Core', value:'Active', icon:'◉', center:true },
-            { label:'PnL This Cycle', value:'+0.004 ETH', icon:'⚡' },
-          ].map((card, i) => (
-            <div key={i} style={{
-              flex: i===1 ? '0 0 200px' : 1,
-              display:'flex', flexDirection:'column', alignItems: i===1?'center':'flex-start', justifyContent:'center',
-              padding: i===1 ? '0' : '0 36px',
-              background: i===1 ? 'rgba(18,22,40,0.85)' : 'rgba(12,15,28,0.75)',
-              backdropFilter:'blur(16px)',
-              border:'1px solid rgba(255,255,255,0.07)',
-              borderBottom:'none',
-              cursor:'pointer',
-              transition:'background 0.25s',
-            }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.background=i===1?'rgba(24,28,50,0.92)':'rgba(16,20,36,0.88)';}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.background=i===1?'rgba(18,22,40,0.85)':'rgba(12,15,28,0.75)';}}
-            >
-              {i===1 ? (
-                <>
-                  <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'8px' }}>
-                    <div style={{ width:'1px', height:'24px', background:'rgba(255,255,255,0.15)' }}/>
-                    <div style={{ width:'44px', height:'44px', borderRadius:'50%', background:'rgba(255,255,255,0.92)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 24px rgba(220,225,255,0.35)' }}>
-                      <div style={{ width:'18px', height:'18px', borderRadius:'3px', background:'#0a0c18' }}/>
-                    </div>
-                    <div style={{ width:'1px', height:'24px', background:'rgba(255,255,255,0.15)' }}/>
-                  </div>
-                  <span style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', letterSpacing:'0.1em', textTransform:'uppercase' }}>Agent Core</span>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:'8px' }}>{card.label}</div>
-                  <div style={{ fontSize:'22px', fontWeight:500, color:'#fff', letterSpacing:'-0.01em' }}>{card.value}</div>
-                  {i===0 && <div style={{ marginTop:'8px', width:'40%', height:'1px', background:'rgba(255,255,255,0.12)' }}/>}
-                </>
-              )}
-            </div>
-          ))}
+        {/* Heading */}
+        <h1 style={{ margin: '0 0 clamp(14px,2vh,22px) 0', fontSize: 'clamp(52px,9vw,130px)', fontWeight: 800, lineHeight: 0.92, letterSpacing: '-0.03em', color: '#fff', opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(18px)', transition: 'opacity 0.8s ease 200ms, transform 0.8s ease 200ms' }}>
+          iKAIZEN
+        </h1>
+
+        {/* Sub heading */}
+        <p style={{ margin: '0 0 clamp(10px,1.5vh,16px) 0', fontSize: 'clamp(13px,1.4vw,17px)', fontWeight: 400, color: 'rgba(255,255,255,0.75)', letterSpacing: '-0.01em', maxWidth: '520px', lineHeight: 1.5, opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(14px)', transition: 'opacity 0.8s ease 320ms, transform 0.8s ease 320ms' }}>
+          iKAIZEN is built on one principle — progress compounds.
+        </p>
+
+        {/* Body */}
+        <div style={{ maxWidth: '460px', marginBottom: 'clamp(24px,4vh,40px)', opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(12px)', transition: 'opacity 0.8s ease 440ms, transform 0.8s ease 440ms' }}>
+          <p style={{ margin: '0 0 8px 0', fontSize: 'clamp(12px,1.1vw,14.5px)', fontWeight: 300, color: 'rgba(255,255,255,0.48)', lineHeight: 1.75 }}>
+            Every day is an opportunity to improve, even if only by 1%.
+          </p>
+          <p style={{ margin: 0, fontSize: 'clamp(12px,1.1vw,14.5px)', fontWeight: 300, color: 'rgba(255,255,255,0.48)', lineHeight: 1.75 }}>
+            {"This isn't about perfection. It's about becoming unstoppable."}
+          </p>
         </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(10px)', transition: 'opacity 0.8s ease 560ms, transform 0.8s ease 560ms' }}>
+          <button style={{ fontSize: 'clamp(11px,1vw,13px)', fontWeight: 600, color: '#050810', background: 'rgba(235,240,255,0.95)', border: 'none', padding: 'clamp(10px,1.2vh,13px) clamp(20px,2vw,30px)', borderRadius: '28px', cursor: 'pointer', letterSpacing: '0.05em', boxShadow: '0 0 24px rgba(180,195,255,0.18)', transition: 'all 0.25s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 0 32px rgba(200,215,255,0.32)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(235,240,255,0.95)'; e.currentTarget.style.boxShadow = '0 0 24px rgba(180,195,255,0.18)'; e.currentTarget.style.transform = 'none'; }}
+          >Mint iNFT</button>
+          <button style={{ fontSize: 'clamp(11px,1vw,13px)', fontWeight: 400, color: 'rgba(255,255,255,0.78)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', padding: 'clamp(10px,1.2vh,13px) clamp(20px,2vw,30px)', borderRadius: '28px', cursor: 'pointer', letterSpacing: '0.05em', transition: 'all 0.25s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.11)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; e.currentTarget.style.color = 'rgba(255,255,255,0.78)'; e.currentTarget.style.transform = 'none'; }}
+          >Enter the System</button>
+        </div>
+
+        {/* Contract */}
+        <p style={{ marginTop: 'clamp(18px,2.5vh,28px)', fontSize: '10px', color: 'rgba(255,255,255,0.18)', letterSpacing: '0.14em', textTransform: 'uppercase', opacity: mounted ? 1 : 0, transition: 'opacity 1s ease 800ms' }}>
+          Contract · 0x1515d22b7Ea637D69c760C3986373FB976d96E8F
+        </p>
       </div>
 
-      <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+      {/* Bottom glass stats bar */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20, display: 'flex', borderTop: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', background: 'rgba(4,6,14,0.72)', opacity: mounted ? 1 : 0, transition: 'opacity 1s ease 700ms' }}>
+        {[
+          { label: 'Network', value: '0G Galileo Testnet' },
+          { label: 'Agent Status', value: 'Active ●' },
+          { label: 'Protocol', value: 'ERC-7857 iNFT' },
+          { label: 'KeeperHub', value: 'Every 4h' },
+        ].map((item, i) => (
+          <div key={i} style={{ flex: 1, padding: 'clamp(10px,1.5vh,16px) clamp(16px,2vw,28px)', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <span style={{ fontSize: '9.5px', color: 'rgba(255,255,255,0.32)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{item.label}</span>
+            <span style={{ fontSize: 'clamp(11px,1vw,13px)', fontWeight: 400, color: item.value.includes('●') ? '#22d3ee' : 'rgba(255,255,255,0.72)', letterSpacing: '0.02em' }}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <style>{`* { box-sizing: border-box; } @media (max-width: 640px) { nav { padding: 0 20px !important; } }`}</style>
     </div>
   );
 }
