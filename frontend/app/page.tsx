@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { isExternal } from 'util/types';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -241,15 +242,26 @@ export default function Home() {
       <nav style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 clamp(20px,4vw,52px)', backdropFilter: 'blur(16px)', background: 'rgba(5,8,16,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '0.10em', color: '#fff' }}>iKZ</span>
         <div style={{ display: 'flex', gap: 'clamp(20px,3vw,44px)', alignItems: 'center' }}>
-          {['about', 'docs', 'github'].map(item => (
-            <a key={item}
-              href={item === 'github' ? 'https://github.com/glassmahn/ikaizen-onchain-agent' : '#'}
-              target={item === 'github' ? '_blank' : undefined}
+          {['about', 'docs', 'github'].map(item => {
+            const links = {
+              about: 'https://ethglobal.com'
+              docs: 'https://medium.com/@glassman4664/ikaizen-onchain-agent-537cbc3862d5'
+              github: 'https://github.com/glassmahn/ikaizen-onchain-agent'
+            }; 
+            const destination = links[item];
+            const isExternal = destination.startsWith('http');
+            return (
+              <a key={item}
+              href={destination}
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
               style={{ fontSize: '13px', fontWeight: 300, color: 'rgba(255,255,255,0.48)', textDecoration: 'none', letterSpacing: '0.05em', transition: 'color 0.2s, border-color 0.2s', paddingBottom: '2px', borderBottom: '1px solid transparent' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.35)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.48)'; e.currentTarget.style.borderBottomColor = 'transparent'; }}
-            >{item}</a>
-          ))}
+            >{item}
+          </a>
+            );
+          })}
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button style={{ fontSize: '11.5px', fontWeight: 500, color: '#050810', background: 'rgba(240,244,255,0.92)', border: 'none', padding: '8px 20px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.05em', transition: 'all 0.22s' }}
@@ -275,7 +287,7 @@ export default function Home() {
 
         {/* Sub heading */}
         <p style={{ margin: '0 0 clamp(10px,1.5vh,16px) 0', fontSize: 'clamp(13px,1.4vw,17px)', fontWeight: 400, color: 'rgba(255,255,255,0.75)', letterSpacing: '-0.01em', maxWidth: '520px', lineHeight: 1.5, opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(14px)', transition: 'opacity 0.8s ease 320ms, transform 0.8s ease 320ms' }}>
-          iKAIZEN is built on one principle — progress compounds.
+          iKAIZEN is built on one principle: progress compounds.
         </p>
 
         {/* Body */}
