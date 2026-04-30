@@ -1,39 +1,187 @@
-<<<<<<< HEAD
-# Agent NFT
-## Introduction
-With the increasing intelligence of AI models, agents have become increasingly powerful in helping people process meaningful daily tasks automatically. In the blockchain industry, many projects have provided functionality for users to create agents. This trend will continue, and "agent x crypto" has been recognized as one of the biggest narratives in the coming years. Currently, a key missing element is the decentralized management of agent ownership. Specifically, when you create an agent on platforms like Virtuals or EternalAI, there is no on-chain information to verify that the agent you created belongs to you. We believe NFTs could provide a key solution to this problem.
+# iKAIZEN — Continuous Improvement Protocol
 
-However, there are challenges in simply using existing NFT standards like ERC721 to represent agents. One major reason is that when transferring an agent NFT token, we are not only transferring the tokenId ownership but also the ownership of the metadata. The metadata of an agent is so valuable (it could be the primary purpose of the transfer) that it is often stored in a private environment or in a public environment with encryption. Therefore, the actual transfer of agent metadata needs to be done in a privacy-preserving and verifiable manner. ERC721 lacks the capability to fulfill this type of transfer.
+> **Every day is an opportunity to improve, even if only by 1%.**
 
-## Our Scheme
+iKAIZEN is an autonomous onchain agent built on the principle that progress compounds. It lives as an ERC-7857 Intelligent NFT (iNFT) on the 0G Galileo Testnet, making autonomous trading decisions, reflecting on outcomes, and evolving its strategy over time.
 
-We therefore propose a new NFT standard, ERC7857, to address this problem. To better understand how this new protocol works, let's first examine how the metadata can be transferred privately and verified in the ERC7857 smart contract. The transfer() interface accepts a proof parameter which verifies the following conditions. For better understanding, we abstract the process of proof generation and verification as an interaction with an ideal oracle that always provides truthful responses. When querying the oracle about a 'newDataHash', it replies with:
+---
 
-1. The 'oldDataHash' representing the data encrypted from the original metadata with a key held by the sender
+## Architecture
 
-2. The 'newDataHash' representing the data encrypted from the original metadata with a new key
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      iKAIZEN Protocol                        │
+├──────────────┬──────────────────┬───────────────────────────┤
+│  Frontend    │  Agent Backend   │  Smart Contracts           │
+│  (Next.js)   │  (TypeScript)    │  (Solidity 0.8.20)         │
+├──────────────┼──────────────────┼───────────────────────────┤
+│  • Landing   │  • Soul engine   │  • ERC7857Upgradeable      │
+│  • Mint UI   │  • Think cycle   │  • AgentNFT (iNFT)         │
+│  • Dashboard │  • Trade exec    │  • AgentMarket             │
+│  • Wallet    │  • Reflect/log   │  • TEEVerifier             │
+└──────────────┴────────┬─────────┴─────────────┬─────────────┘
+                        │                       │
+              ┌─────────┴──────────┐   ┌───────┴──────────┐
+              │ 0G Compute (Qwen)  │   │ 0G Galileo Testnet│
+              │ KeeperHub (4h)     │   │ Chain ID: 16602   │
+              │ Uniswap API        │   │                   │
+              └────────────────────┘   └──────────────────┘
+```
 
-3. Whether the receiver can access the data behind the 'newDataHash'
+## ERC-7857: Intelligent NFT Standard
 
-4. The 'sealedKey' containing the new key encrypted with the receiver's public key
+iKAIZEN implements ERC-7857, a novel NFT standard that enables **private metadata transfer** with cryptographic verification. Unlike ERC-721, transferring an agent NFT transfers not just tokenId ownership but also ownership of encrypted metadata — requiring a privacy-preserving, verifiable transfer mechanism.
 
-The process can be illustrated as follows and is shown in Fig.1. When the sender invokes transfer(), the contract queries the oracle about the target 'newDataHash'. The oracle replies with a pair of 'oldDataHash' and 'newDataHash', which contain data encrypted from the original metadata with the old and new keys respectively. The oracle also confirms whether the receiver can access the data behind the 'newDataHash' and provides a 'sealedKey' that is encrypted with the receiver's public key. If the oracle say 'yes', the contract changes the token's owner from sender to receiver, updates the token's 'oldDataHash' to 'newDataHash', and publishes the 'sealedKey'. The receiver can then access the original metadata using the key decrypted from 'sealedKey' with their private key. This ideal oracle can be implemented using either TEE or ZKP in this protocol.
+### The Oracle Mechanism
 
-![Oracle overview](doc/img/oracle_overview.jpeg)
+The `transfer()` interface accepts a `proof` parameter that verifies conditions through an ideal oracle (implemented via TEE or ZKP):
 
-Now, let's examine the oracle implementations. The TEE implementation is shown in Fig.2. The sender transmits the 'oldDataHash', hash-identified data, and encrypted key to the TEE, with the key encrypted using TEE's public key to ensure only TEE can access it. TEE then decrypts the encrypted key with its private key to obtain the old key and decrypts the 'oldDataHash'-identified data to retrieve the original metadata. TEE generates a new key securely and re-encrypts the original metadata with the new key to create the 'newDataHash'. TEE also encrypts the new key with the receiver's public key to generate the 'sealedKey'. Finally, TEE outputs the 'sealedKey', 'oldDataHash', and 'newDataHash'.
+1. **oldDataHash** — data encrypted from original metadata with sender's key
+2. **newDataHash** — data encrypted from original metadata with receiver's new key
+3. **Access confirmation** — oracle confirms receiver can access data behind newDataHash
+4. **sealedKey** — new key encrypted with receiver's public key
 
-![TEE oracle](doc/img/tee_oracle.jpeg)
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Sender  │ ──▶ │ TEE/ZKP  │ ──▶ │ Contract │
+│  (key)   │     │  Oracle  │     │  (verify)│
+└──────────┘     └──────────┘     └──────────┘
+```
 
-It should be noted that in Fig.2 and Fig.3, TEE can generate a new key securely to prevent the sender from accessing it, while ZKP cannot - this represents a significant difference between the two approaches. Consequently, in ZKP-implemented oracles, the receiver should change their key when next updating the data.
+See `doc/` for full flow diagrams.
 
-![ZKP oracle](doc/img/zkp_oracle.jpeg)
+---
 
-In summary, the full flow is shown in Fig.4. Before the sender initiates the transfer() to transfer their token to the receiver, they interact with TEE (or ZKP) to obtain a signature verifying the correct hash change from 'oldDataHash' to 'newDataHash' through re-encryption with a new key, and a correct sealed key encrypted with the receiver's public key. The sender then interacts with the receiver to obtain a signature confirming access to the data behind the 'newDataHash'. Finally, the sender submits these two signatures to invoke transfer(), and the contract verifies the signatures to update the on-chain state. The receiver can then decrypt the data behind the 'newDataHash' using the key decrypted from the on-chain 'sealedKey' with their private key, completing the transfer of the token with private metadata.
+## Quick Start
 
-![Full flow](doc/img/full_flow.jpeg)
+### Prerequisites
 
-The clone() process is similar to transfer(), but instead of changing the ownership of the original token, it creates a new token with the same metadata. We also support an authorizeUsage() function that adds authority for using the token's private metadata but not accessing it, requiring a sealed executor that processes the metadata securely. The sealed executor can be implemented using either TEE or FHE.
-=======
-# iKAIZEN-onchain-agent
->>>>>>> 8214e9a86f3ef86dd50b17adbc30985dc7bb73a2
+-   Node.js 18+
+-   MetaMask or Rabby wallet
+-   0G Galileo Testnet added to wallet
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/glassmahn/ikaizen-onchain-agent.git
+cd ikaizen-onchain-agent
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your private key and API keys
+```
+
+### Deploy Contracts
+
+```bash
+# Compile
+npm run compile
+
+# Deploy to 0G testnet
+npm run deploy zgTestnet
+
+# Verify on explorer
+npm run verify:zgTestnet
+```
+
+### Run the Agent
+
+```bash
+npm run agent
+```
+
+### Run Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## Contract Addresses (0G Galileo Testnet)
+
+| Contract        | Address                                      |
+| --------------- | -------------------------------------------- |
+| AgentNFT (iNFT) | `0x1515d22b7Ea637D69c760C3986373FB976d96E8F` |
+| TEEVerifier     | `0xcff69bA7d58a426A1503DFeA48f63ad7343f0153` |
+| AgentMarket     | _See `deployments/zgTestnet/`_               |
+
+---
+
+## Agent Cycle
+
+iKAIZEN runs on a **KeeperHub**-triggered 4-hour cycle:
+
+1. **Load Soul** — retrieve strategy, memory, PnL from `soul.json`
+2. **Think** — analyze market conditions, apply strategy
+3. **Execute** — perform trade via Uniswap API (or simulated)
+4. **Reflect** — update memory, adjust strategy based on outcome
+5. **Evolve** — save updated soul for next cycle
+
+```
+┌──────┐   ┌──────┐   ┌─────────┐   ┌─────────┐   ┌──────┐
+│ Load │──▶│ Think│──▶│ Execute │──▶│ Reflect │──▶│ Save │
+│ Soul │   │      │   │ Trade   │   │ Outcome │   │ Soul │
+└──────┘   └──────┘   └─────────┘   └─────────┘   └──────┘
+     ▲                                                   │
+     └────────────── KeeperHub (every 4h) ───────────────┘
+```
+
+---
+
+## Soul Structure
+
+```json
+{
+    "goal": "Maximize ETH-USDC yield safely with low risk",
+    "memory": ["[2026-04-24] BUY_ETH: Initial position..."],
+    "strategyVersion": "1.0",
+    "riskTolerance": 0.15,
+    "totalTrades": 3,
+    "totalPnL": 0.004,
+    "lastAction": "HOLD"
+}
+```
+
+---
+
+## Tech Stack
+
+| Layer           | Technology                             |
+| --------------- | -------------------------------------- |
+| Smart Contracts | Solidity 0.8.20, Hardhat, OpenZeppelin |
+| Backend         | TypeScript, ethers.js v6, 0G SDK       |
+| Frontend        | Next.js 16, React 19, Tailwind CSS v4  |
+| AI/Compute      | 0G Serving Broker, Qwen model          |
+| Trading         | Uniswap Trading API (Sepolia testnet)  |
+| Automation      | KeeperHub (cron every 4h)              |
+| Network         | 0G Galileo Testnet (Chain ID: 16602)   |
+
+---
+
+## Tracks
+
+-   **0G Autonomous Agents & iNFT** — ERC-7857 implementation with onchain agent
+-   **Uniswap Foundation** — Uniswap Trading API integration for autonomous swaps
+-   **KeeperHub** — Decentralized automation for agent lifecycle
+
+---
+
+## Links
+
+-   **Live Demo**: _TBD_
+-   **Medium Article**: https://medium.com/@glassman4664/ikaizen-onchain-agent-537cbc3862d5
+-   **ETHGlobal**: https://ethglobal.com/events/openagents
+-   **Discord**: https://ethglobal.com/discord
+
+---
+
+## License
+
+MIT — See `LICENSE.md`
