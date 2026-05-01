@@ -8,22 +8,16 @@ import { useAgent } from "@/lib/agent-context"
 import { useRouter } from "next/navigation"
 
 export function AgentSoul() {
-  const { soul, loading } = useAgent()
+  const { soul, loading, refreshSoul } = useAgent()
   const router = useRouter()
 
-  const soulData = {
-    goal: soul?.goal || "Maximize ETH-USDC yield safely with low risk tolerance",
-    strategyVersion: soul?.strategyVersion || "1.0",
-    riskTolerance: soul?.riskTolerance || 0.15,
-    lastUpdated: "2 hours ago",
-    memories:
-      soul?.memory?.slice(-3).map((m) => m.split(": ")[1] || m) || [],
-    metrics: {
-      confidence: 78,
-      adaptability: 85,
-      riskAwareness: 92,
-    },
-  }
+  const riskPercent = (soul?.riskTolerance || 0.15) * 100
+
+  const recentMemories = soul?.memory?.slice(-3) || []
+
+  const confidence = Math.min(95, 50 + (soul?.totalTrades || 0) * 2)
+  const adaptability = Math.min(95, 60 + (soul?.totalTrades || 0) * 3)
+  const riskAwareness = Math.min(95, 70 + (1 - (soul?.riskTolerance || 0.15)) * 20)
 
   return (
     <motion.div
@@ -64,7 +58,7 @@ export function AgentSoul() {
           </span>
         </div>
         <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-          {soulData.goal}
+          {soul?.goal || "Set your agent's goal to begin trading"}
         </p>
       </div>
 
@@ -75,7 +69,7 @@ export function AgentSoul() {
             Strategy Version
           </p>
           <p className="text-lg font-bold text-primary">
-            v{soulData.strategyVersion}
+            v{soul?.strategyVersion || "1.0"}
           </p>
         </div>
         <div className="p-3 rounded-lg bg-muted/50">
@@ -83,7 +77,7 @@ export function AgentSoul() {
             Risk Tolerance
           </p>
           <p className="text-lg font-bold text-foreground">
-            {(soulData.riskTolerance * 100).toFixed(0)}%
+            {riskPercent.toFixed(0)}%
           </p>
         </div>
       </div>
@@ -93,17 +87,19 @@ export function AgentSoul() {
         <p className="text-sm font-medium text-foreground">
           Cognitive Metrics
         </p>
-        {Object.entries(soulData.metrics).map(([key, value]) => (
-          <div key={key}>
+        {[
+          { key: "confidence", value: confidence, label: "Confidence" },
+          { key: "adaptability", value: adaptability, label: "Adaptability" },
+          { key: "riskAwareness", value: riskAwareness, label: "Risk Awareness" },
+        ].map(metric => (
+          <div key={metric.key}>
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-muted-foreground capitalize">
-                {key.replace(/([A-Z])/g, " $1")}
-              </span>
+              <span className="text-muted-foreground">{metric.label}</span>
               <span className="text-foreground font-medium">
-                {value}%
+                {metric.value}%
               </span>
             </div>
-            <Progress value={value} className="h-1.5" />
+            <Progress value={metric.value} className="h-1.5" />
           </div>
         ))}
       </div>
@@ -114,8 +110,8 @@ export function AgentSoul() {
           Recent Memories
         </p>
         <div className="space-y-2">
-          {soulData.memories.length > 0 ? (
-            soulData.memories.map((memory, i) => (
+          {recentMemories.length > 0 ? (
+            recentMemories.map((memory, i) => (
               <div
                 key={i}
                 className="flex items-start gap-2 text-xs text-muted-foreground"
@@ -126,7 +122,7 @@ export function AgentSoul() {
             ))
           ) : (
             <p className="text-xs text-muted-foreground">
-              No memories yet
+              No memories yet. Trigger your first cycle.
             </p>
           )}
         </div>
@@ -146,12 +142,13 @@ export function AgentSoul() {
 
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <span className="text-xs text-muted-foreground">
-            Last updated: {soulData.lastUpdated}
+            {soul?.totalTrades || 0} trades • {soul?.memory?.length || 0} memories
           </span>
           <Button
             variant="ghost"
             size="sm"
             className="text-primary gap-1"
+            onClick={refreshSoul}
           >
             <RefreshCw className="h-3 w-3" />
             Refresh

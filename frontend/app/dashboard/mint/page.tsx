@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useMintAgent } from "@/lib/web3-hooks"
+import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 
 export default function MintPage() {
@@ -79,19 +80,11 @@ export default function MintPage() {
       })
       
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-        const cycleResponse = await fetch(`${apiUrl}/api/agent/cycle`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const cycleData = await apiClient.triggerAgentCycle()
+        toast({
+          title: "Agent Cycle Complete!",
+          description: `Action: ${cycleData.action}`,
         })
-        
-        if (cycleResponse.ok) {
-          const cycleData = await cycleResponse.json()
-          toast({
-            title: "Agent Cycle Complete!",
-            description: `Action: ${cycleData.action} - ${cycleData.reason}`,
-          })
-        }
       } catch (cycleErr) {
         console.warn("Cycle trigger failed (may retry later):", cycleErr)
       }
