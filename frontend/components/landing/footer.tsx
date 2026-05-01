@@ -11,10 +11,9 @@ const footerLinks = {
     { label: "Roadmap", href: "#roadmap" },
   ],
   resources: [
-    { label: "Documentation", href: "#" },
-    { label: "API Reference", href: "#" },
-    { label: "GitHub", href: "https://github.com", external: true },
-    { label: "ETHGlobal", href: "https://ethglobal.com", external: true },
+    { label: "Documentation", href: process.env.NEXT_PUBLIC_DOCS_URL || "https://medium.com/@glassman4664/ikaizen-onchain-agent-537cbc3862d5", external: true },
+    { label: "GitHub", href: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/glassmahn/iKAIZEN-onchain-agent", external: true },
+    { label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "https://twitter.com/ifu_naya2", external: true },
   ],
   integrations: [
     { label: "0G Network", href: "https://0g.ai", external: true },
@@ -44,7 +43,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-4">
               <a
-                href="https://github.com"
+                href="https://github.com/glassmahn/iKAIZEN-onchain-agent"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -52,7 +51,7 @@ export function Footer() {
                 <Github className="h-5 w-5" />
               </a>
               <a
-                href="https://twitter.com"
+                href="https://twitter.com/ifu_naya2"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"

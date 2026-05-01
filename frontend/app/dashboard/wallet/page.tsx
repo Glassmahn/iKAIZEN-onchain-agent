@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
+import { useAccount } from "wagmi"
+import { useToast } from "@/hooks/use-toast"
 
 const tokens = [
   { symbol: "ETH", name: "Ethereum", balance: "1.45", value: "$2,892.50", change: "+3.2%" },
@@ -23,12 +25,41 @@ const recentTransactions = [
 
 export default function WalletPage() {
   const [copied, setCopied] = useState(false)
-  const walletAddress = "0x1a2b3c4d5e6f7890abcdef1234567890abcdef12"
+  const [depositAmount, setDepositAmount] = useState("")
+  const [showDepositModal, setShowDepositModal] = useState(false)
+  const { address } = useAccount()
+  const { toast } = useToast()
+  const walletAddress = address || "0x1a2b3c4d5e6f7890abcdef1234567890abcdef12"
 
   const copyAddress = () => {
     navigator.clipboard.writeText(walletAddress)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    toast({ title: "Address copied!", duration: 2000 })
+  }
+
+  const handleOpenExplorer = () => {
+    window.open(
+      `https://testnet.0gscan.xyz/address/${walletAddress}`,
+      "_blank"
+    )
+  }
+
+  const handleDeposit = () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      toast({ title: "Enter valid amount", variant: "destructive" })
+      return
+    }
+    toast({ title: `Deposit initiated for ${depositAmount} ETH` })
+    setDepositAmount("")
+    setShowDepositModal(false)
+  }
+
+  const handleWithdraw = () => {
+    toast({
+      title: "Withdrawal initiated",
+      description: "Check your wallet for the transaction",
+    })
   }
 
   return (
@@ -75,7 +106,11 @@ export default function WalletPage() {
                           <Copy className="h-4 w-4" />
                         )}
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={handleOpenExplorer}
+                      >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
@@ -84,11 +119,18 @@ export default function WalletPage() {
 
                 {/* Action buttons */}
                 <div className="flex gap-3 mt-6">
-                  <Button className="flex-1 bg-primary hover:bg-primary/90">
+                  <Button 
+                    className="flex-1 bg-primary hover:bg-primary/90"
+                    onClick={() => setShowDepositModal(true)}
+                  >
                     <ArrowDownToLine className="mr-2 h-4 w-4" />
                     Deposit
                   </Button>
-                  <Button variant="outline" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={handleWithdraw}
+                  >
                     <Send className="mr-2 h-4 w-4" />
                     Withdraw
                   </Button>
@@ -144,9 +186,17 @@ export default function WalletPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Amount (ETH)</Label>
-                <Input type="number" placeholder="0.0" />
+                <Input 
+                  type="number" 
+                  placeholder="0.0"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
               </div>
-              <Button className="w-full bg-primary hover:bg-primary/90">
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90"
+                onClick={handleDeposit}
+              >
                 <ArrowDownToLine className="mr-2 h-4 w-4" />
                 Deposit ETH
               </Button>

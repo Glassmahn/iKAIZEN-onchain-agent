@@ -53,9 +53,16 @@ export function Navbar() {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              Docs
-            </Button>
+            <a
+              href={process.env.NEXT_PUBLIC_DOCS_URL || "https://medium.com/@glassman4664/ikaizen-onchain-agent-537cbc3862d5"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                Docs
+              </Button>
+            </a>
             <Link href="/dashboard">
               <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground glow-border">
                 Launch App

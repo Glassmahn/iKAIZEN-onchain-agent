@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Settings, Bell, Shield, Zap, Clock, Save } from "lucide-react"
+import { Settings, Bell, Shield, Zap, Clock, Save, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,12 +11,40 @@ import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAgent } from "@/lib/agent-context"
 
 export default function SettingsPage() {
+  const { soul, updateSoulRiskTolerance, updateSoulGoal, error } = useAgent()
   const [autoTrade, setAutoTrade] = useState(true)
   const [notifications, setNotifications] = useState(true)
-  const [riskTolerance, setRiskTolerance] = useState([15])
+  const [riskTolerance, setRiskTolerance] = useState([soul?.riskTolerance ? soul.riskTolerance * 100 : 15])
   const [cycleInterval, setCycleInterval] = useState("4")
+  const [isSaving, setIsSaving] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
+  const [tradingGoal, setTradingGoal] = useState(soul?.goal || "")
+
+  const handleSaveRiskTolerance = async () => {
+    setIsSaving(true)
+    try {
+      await updateSoulRiskTolerance(riskTolerance[0] / 100)
+      setSuccessMessage("Risk tolerance updated successfully")
+      setTimeout(() => setSuccessMessage(""), 3000)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveGoal = async () => {
+    if (!tradingGoal.trim()) return
+    setIsSaving(true)
+    try {
+      await updateSoulGoal(tradingGoal)
+      setSuccessMessage("Trading goal updated successfully")
+      setTimeout(() => setSuccessMessage(""), 3000)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -26,11 +54,28 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-muted-foreground">Configure your iKAIZEN agent</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={handleSaveRiskTolerance}
+          disabled={isSaving}
+        >
           <Save className="mr-2 h-4 w-4" />
-          Save Changes
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
+
+      {successMessage && (
+        <div className="p-4 rounded-lg bg-accent/10 border border-accent/30">
+          <p className="text-sm text-accent">{successMessage}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       <Tabs defaultValue="agent" className="space-y-6">
         <TabsList>
@@ -50,6 +95,27 @@ export default function SettingsPage() {
               <CardDescription>Core trading parameters</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Trading Goal */}
+              <div className="space-y-2">
+                <Label htmlFor="goal">Trading Goal</Label>
+                <Input
+                  id="goal"
+                  placeholder="Enter your trading goal..."
+                  value={tradingGoal}
+                  onChange={(e) => setTradingGoal(e.target.value)}
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">{tradingGoal.length}/200</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSaveGoal}
+                  disabled={isSaving || !tradingGoal.trim()}
+                >
+                  Update Goal
+                </Button>
+              </div>
+
               {/* Risk tolerance */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

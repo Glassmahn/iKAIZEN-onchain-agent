@@ -1,5 +1,7 @@
 node_modules
 .env
+.env.local
+.env.*.local
 coverage
 coverage.json
 typechain
@@ -9,3 +11,36 @@ cache
 artifacts
 deployments
 external-types
+
+# Next.js
+.next/
+out/
+frontend/.next/
+frontend/out/
+
+# Build outputs
+backend/dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Hardhat
+hardhat_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Soul state (keep local only)
+soul/soul.json

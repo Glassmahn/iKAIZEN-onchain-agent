@@ -1,6 +1,7 @@
 "use client"
 
 import { StatsCards } from "@/components/dashboard/stats-cards"
+import { LivePriceFeed } from "@/components/dashboard/live-price-feed"
 import { PortfolioChart } from "@/components/dashboard/portfolio-chart"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { AgentSoul } from "@/components/dashboard/agent-soul"
@@ -17,6 +18,9 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <StatsCards />
+
+      {/* Live Price Feed */}
+      <LivePriceFeed />
 
       {/* Main content grid */}
       <div className="grid lg:grid-cols-3 gap-6">

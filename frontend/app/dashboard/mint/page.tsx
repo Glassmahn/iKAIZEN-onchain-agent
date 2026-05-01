@@ -1,25 +1,86 @@
 "use client"
 
 import { useState } from "react"
+import { useAccount } from "wagmi"
 import { motion } from "framer-motion"
-import { Zap, Shield, Brain, Sparkles, ArrowRight, Loader2 } from "lucide-react"
+import { Zap, Shield, Brain, Sparkles, ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useMintAgent } from "@/lib/web3-hooks"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MintPage() {
-  const [minting, setMinting] = useState(false)
+  const { address, isConnected } = useAccount()
+  const { mint, isLoading, error } = useMintAgent()
+  const { toast } = useToast()
+  
   const [riskTolerance, setRiskTolerance] = useState([15])
   const [agentName, setAgentName] = useState("")
   const [tradingGoal, setTradingGoal] = useState("")
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [mintError, setMintError] = useState<string | null>(null)
 
-  const handleMint = () => {
-    setMinting(true)
-    // Simulate minting
-    setTimeout(() => setMinting(false), 3000)
+  const handleMint = async () => {
+    try {
+      setMintError(null)
+      setTxHash(null)
+
+      if (!isConnected || !address) {
+        setMintError("Please connect your wallet first")
+        toast({
+          title: "Wallet not connected",
+          description: "Connect your wallet to mint an iNFT",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!agentName.trim()) {
+        setMintError("Agent name is required")
+        return
+      }
+
+      if (!tradingGoal.trim()) {
+        setMintError("Trading goal is required")
+        return
+      }
+
+      // Create metadata URI (you'd normally upload to IPFS/Arweave)
+      const metadata = {
+        name: agentName,
+        description: tradingGoal,
+        riskTolerance: riskTolerance[0],
+        tradingPair: "ETH-USDC",
+      }
+      const uri = `data:application/json;base64,${Buffer.from(JSON.stringify(metadata)).toString('base64')}`
+
+      // Call mint function
+      const hash = await mint(
+        address,           // to (recipient)
+        uri,              // metadata URI
+        address           // creator
+      )
+
+      setTxHash(hash as string)
+      toast({
+        title: "iNFT Minted!",
+        description: `Transaction: ${(hash as string).slice(0, 10)}...`,
+      })
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to mint NFT"
+      setMintError(errorMsg)
+      console.error("Mint error:", err)
+      toast({
+        title: "Mint failed",
+        description: errorMsg,
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -174,16 +235,58 @@ export default function MintPage() {
                 ))}
               </div>
 
-              {/* Mint button */}
+              {/* Connection status */}
+              {!isConnected && (
+                <Alert className="border-yellow-500/30 bg-yellow-500/10 mb-4">
+                  <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                    Connect your wallet to mint an iNFT
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Error display */}
+              {(mintError || error) && (
+                <Alert className="border-destructive/30 bg-destructive/10 mb-4">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <AlertDescription className="text-destructive">
+                    {mintError || error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Success display */}
+              {txHash && (
+                <Alert className="border-green-500/30 bg-green-500/10 mb-4">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">
+                    <div>iNFT Minted Successfully!</div>
+                    <a
+                      href={`https://testnet.0gscan.xyz/tx/${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs underline mt-1 block"
+                    >
+                      View on 0G Explorer: {txHash?.slice(0, 10)}...
+                    </a>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Button
                 className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={handleMint}
-                disabled={minting || !agentName || !tradingGoal}
+                disabled={isLoading || !isConnected || !agentName || !tradingGoal || !!txHash}
               >
-                {minting ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Minting iNFT...
+                  </>
+                ) : txHash ? (
+                  <>
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Minted!
                   </>
                 ) : (
                   <>
