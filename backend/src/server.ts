@@ -164,18 +164,17 @@ app.post('/api/agent/reflect', (req, res) => {
     
     // Optionally adjust risk tolerance based on performance
     if (winRate < 0.3 && soul.riskTolerance > 0.1) {
-      soul.riskTolerance = Math.max(0.1, soul.riskTolerance - 0.05);
-    } else if (winRate > 0.7 && soul.riskTolerance < 1.0) {
-      soul.riskTolerance = Math.min(1.0, soul.riskTolerance + 0.05);
-    }
-    
-    fs.writeFileSync(SOUL_PATH, JSON.stringify(soul, null, 2));
-    
-    res.json({ success: true, reflection, updatedSoul: soul });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to reflect', details: err.message });
-  }
-});
+  soul.riskTolerance = Math.max(0.1, soul.riskTolerance - 0.05);
+} else if (winRate > 0.7 && soul.riskTolerance < 1.0) {
+  soul.riskTolerance = Math.min(1.0, soul.riskTolerance + 0.05);
+}
+
+fs.writeFileSync(SOUL_PATH, JSON.stringify(soul, null, 2));
+
+res.json({ success: true, reflection, updatedSoul: soul });
+} catch (err) {
+  res.status(500).json({ error: 'Failed to reflect', details: err.message });
+}
 });
 
 // GET /api/activity
