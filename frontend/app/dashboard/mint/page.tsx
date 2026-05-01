@@ -71,6 +71,30 @@ export default function MintPage() {
         title: "iNFT Minted!",
         description: `Transaction: ${(hash as string).slice(0, 10)}...`,
       })
+
+      // Trigger agent cycle after successful mint
+      toast({
+        title: "Starting agent cycle...",
+        description: "Agent is analyzing and making decisions",
+      })
+      
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        const cycleResponse = await fetch(`${apiUrl}/api/agent/cycle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        
+        if (cycleResponse.ok) {
+          const cycleData = await cycleResponse.json()
+          toast({
+            title: "Agent Cycle Complete!",
+            description: `Action: ${cycleData.action} - ${cycleData.reason}`,
+          })
+        }
+      } catch (cycleErr) {
+        console.warn("Cycle trigger failed (may retry later):", cycleErr)
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to mint NFT"
       setMintError(errorMsg)

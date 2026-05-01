@@ -1,53 +1,27 @@
-# FEEDBACK.md — Uniswap Track
+# Uniswap Integration Feedback
 
-## Project: iKAIZEN — Autonomous Onchain Agent with ERC-7857 iNFT
+## How iKAIZEN Uses Uniswap
+iKAIZEN uses the Uniswap Trading API to execute autonomous ETH/USDC swaps
+on Sepolia testnet as part of its agent cycle.
 
-### How We Used Uniswap
+## Integration Details
+- **API:** Uniswap Trading API v1
+- **Endpoint:** https://trade-api.gateway.uniswap.org/v1
+- **Pair:** ETH/USDC
+- **Network:** Sepolia Testnet (Chain ID: 11155111)
+- **Token In (BUY):** USDC — 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
+- **Token Out (BUY):** WETH — 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14
 
-iKAIZEN integrates the **Uniswap Trading API** as its primary execution layer for autonomous token swaps. The agent uses Uniswap to execute BUY/SELL decisions on ETH/USDC pairs as part of its continuous improvement cycle.
+## What Worked Well
+- Quote API was fast and reliable
+- Clear documentation made integration straightforward
+- Testnet support made development easy
 
-#### Integration Details
+## What Could Be Improved
+- More detailed error messages when swaps fail
+- Better testnet faucet support for USDC on Sepolia
+- WebSocket support for real-time price feeds
 
-1. **Quote Fetching** — Before each trade, iKAIZEN calls the Uniswap `/v1/quote` endpoint to get real-time pricing and optimal routing for the target trade pair.
-
-2. **Swap Execution** — Using the `/v1/swap` endpoint, the agent receives calibrated calldata for on-chain execution, including gas estimates and slippage parameters.
-
-3. **On-Chain Execution** — The signed swap transaction is submitted via ethers.js to the target network (Sepolia testnet for development, with plans for mainnet).
-
-4. **Graceful Fallback** — When the Uniswap API is unavailable or compute-constrained, the agent logs the decision as simulated and retries on the next cycle, ensuring no agent cycle is wasted.
-
-### Why Uniswap
-
--   **Best-in-class liquidity routing** — Uniswap's API provides optimal swap paths, critical for an autonomous agent that must minimize slippage without human oversight
--   **Clean API design** — The quote + swap two-step pattern fits naturally into the agent's decision → execute → reflect loop
--   **Testnet support** — Sepolia testnet support allowed us to develop and test the full trading pipeline risk-free
-
-### Agent Trade Flow
-
-```
-Think (decision engine)
-  │
-  ▼
-Get Uniswap Quote (USDC ↔ WETH)
-  │
-  ▼
-Get Uniswap Swap Calldata
-  │
-  ▼
-Sign & Submit Transaction
-  │
-  ▼
-Reflect (update soul with outcome)
-```
-
-### Feedback on Uniswap API
-
--   **Excellent**: The two-step quote/swap API is well-designed for programmatic trading
--   **Suggestion**: Native support for 0G chain or other emerging L2s would expand use cases for autonomous agents
--   **Suggestion**: A webhook or event system for price alerts would complement agent decision-making
-
-### Links
-
--   GitHub: https://github.com/glassmahn/ikaizen-onchain-agent
--   Live Demo: _TBD_
--   Medium: https://medium.com/@glassman4664/ikaizen-onchain-agent-537cbc3862d5
+## Overall Experience
+The Uniswap API made it easy to add real trading capabilities to an
+autonomous AI agent. The quote → swap flow is clean and well documented.
