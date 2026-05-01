@@ -12,7 +12,6 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "types": ["node"] 
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+    "ignoreDeprecations": "5.0"
+  }
 }
