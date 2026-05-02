@@ -34,7 +34,7 @@ Your code has been pushed to GitHub. Now complete deployment manually:
 |------|-------|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3001` |
 | `NEXT_PUBLIC_AGENT_NFT_ADDRESS` | `0x1515d22b7Ea637D69c760C3986373FB976d96E8F` |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | `e3eb813c63b8122bc2158ec0eb5d8c8c` |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | `e3eb813*******b5d8c8c` |
 | `NEXT_PUBLIC_0G_RPC_URL` | `https://evmrpc-testnet.0g.ai` |
 | `NEXT_PUBLIC_AGENT_MARKET_ADDRESS` | `0x0000000000000000000000000000000000000000` |
 
